@@ -1,0 +1,11 @@
+eclipse.preferences.version=1
+encoding//src/main/java/xupt/se/ttms/controller/StudioServlet.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/dao/StudioDAO.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/filter/Filter1Cors.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/filter/Filter2CharsetEncoding.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/idao/DAOFactory.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/idao/iStudioDAO.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/model/Studio.java=UTF-8
+encoding//src/main/java/xupt/se/ttms/service/StudioSrv.java=UTF-8
+encoding//src/main/java/xupt/se/util/DBUtil.java=UTF-8
+encoding//src/main/webapp/admin/studio/detail.html=UTF-8
