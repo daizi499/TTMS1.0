@@ -34,3 +34,8 @@ src/main/*.iml
 .metadata/
 
 /readme2.md
+
+# Eclipse IDE
+.classpath
+.project
+.settings/
