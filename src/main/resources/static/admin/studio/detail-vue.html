@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<title>演出厅表单 - 汉唐剧院</title>
+<link rel="stylesheet" href="../../css/font-awesome.min.css" />
+<link rel="stylesheet" href="../../css/theme.css" />
+<script src="../../js/theme.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .form-card { max-width: 640px; }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <div class="app-layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="fa fa-film"></i> 汉唐剧院</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-label">剧院管理</li>
+        <li><a href="index-vue.html" class="active"><i class="fa fa-building"></i> <span>演出厅管理</span></a></li>
+        <li><a href="../play/index-vue.html"><i class="fa fa-video-camera"></i> <span>剧目管理</span></a></li>
+        <li><a href="../schedule/index-vue.html"><i class="fa fa-calendar"></i> <span>演出计划</span></a></li>
+      </ul>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div class="main-area">
+      <header class="top-header">
+        <div class="logo"><i class="fa fa-film"></i> 汉唐剧院管理系统</div>
+        <div class="header-right">
+          <button id="theme-toggle-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题">☾</button>
+          <span style="font-size:13px;opacity:0.85">管理员</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">演出厅管理 / {{ typeText }}</div>
+
+        <!-- 表单卡片 -->
+        <div class="card form-card">
+          <form @submit.prevent="submit">
+            <!-- 编号（仅修改时显示） -->
+            <div class="form-group" v-if="type==='update'">
+              <label class="form-label">演出厅编号</label>
+              <input type="text" class="form-input" :value="form.id" disabled>
+            </div>
+
+            <!-- 名称 -->
+            <div class="form-group">
+              <label class="form-label">演出厅名称 <span style="color:#c62828">*</span></label>
+              <input type="text" class="form-input" v-model="form.name" placeholder="请输入演出厅名称">
+            </div>
+
+            <!-- 行数 + 列数 -->
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">座位行数 <span style="color:#c62828">*</span></label>
+                <input type="number" class="form-input" v-model.number="form.rowCount" placeholder="请输入行数" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">座位列数 <span style="color:#c62828">*</span></label>
+                <input type="number" class="form-input" v-model.number="form.colCount" placeholder="请输入列数" min="1">
+              </div>
+            </div>
+
+            <!-- 描述 -->
+            <div class="form-group">
+              <label class="form-label">描述</label>
+              <input type="text" class="form-input" v-model="form.introduction" placeholder="请输入演出厅描述">
+            </div>
+
+            <!-- 状态 -->
+            <div class="form-group">
+              <label class="form-label">状态</label>
+              <select class="form-select" v-model.number="form.status">
+                <option :value="1">启用</option>
+                <option :value="0">禁用</option>
+              </select>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="mt-16" style="display:flex;gap:12px">
+              <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> 提交</button>
+              <button type="button" class="btn btn-outline" @click="$event=>window.location='index-vue.html'">
+                <i class="fa fa-arrow-left"></i> 返回
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue
+
+// 从URL参数中取值
+function getParam(name) {
+  var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
+createApp({
+  data() {
+    return {
+      type: 'add',  // add 或 update
+      form: { id: null, name: '', rowCount: null, colCount: null, introduction: '', status: 1 }
+    }
+  },
+  computed: {
+    typeText() { return this.type === 'add' ? '新增演出厅' : '修改演出厅' }
+  },
+  mounted() {
+    // 读取URL参数中的type
+    this.type = getParam('type') || 'add'
+    // 如果是修改模式，从URL参数中取当前值填充表单
+    if (this.type === 'update') {
+      this.form.id = parseInt(getParam('id'))
+      this.form.name = getParam('name') || ''
+      this.form.rowCount = parseInt(getParam('rowCount'))
+      this.form.colCount = parseInt(getParam('colCount'))
+      this.form.introduction = getParam('introduction') || ''
+    }
+    // 初始化主题图标
+    updateIcon(document.documentElement.getAttribute('data-theme'))
+  },
+  methods: {
+    // 提交表单：新增调用POST，修改调用PUT
+    submit() {
+      if (!this.form.name.trim()) return alert('请输入演出厅名称')
+      if (!this.form.rowCount || this.form.rowCount <= 0) return alert('座位行数必须大于0')
+      if (!this.form.colCount || this.form.colCount <= 0) return alert('座位列数必须大于0')
+
+      if (this.type === 'add') {
+        axios.post('/api/studio', this.form).then(res => {
+          alert(res.data.msg)
+          if (res.data.code === 200) window.location = 'index-vue.html'
+        })
+      } else {
+        axios.put('/api/studio', this.form).then(res => {
+          alert(res.data.msg)
+          if (res.data.code === 200) window.location = 'index-vue.html'
+        })
+      }
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

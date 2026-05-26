@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<title>剧目管理 - 汉唐剧院</title>
+<link rel="stylesheet" href="../../css/font-awesome.min.css" />
+<link rel="stylesheet" href="../../css/theme.css" />
+<script src="../../js/theme.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .actions-cell { display: flex; gap: 8px; }
+  .empty-state { text-align: center; padding: 60px 0; color: var(--text-muted); }
+  .empty-state i { font-size: 48px; display: block; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <div class="app-layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="fa fa-film"></i> 汉唐剧院</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-label">剧院管理</li>
+        <li><a href="../studio/index-vue.html"><i class="fa fa-building"></i> <span>演出厅管理</span></a></li>
+        <li><a href="index-vue.html" class="active"><i class="fa fa-video-camera"></i> <span>剧目管理</span></a></li>
+        <li><a href="../schedule/index-vue.html"><i class="fa fa-calendar"></i> <span>演出计划</span></a></li>
+        <li class="sidebar-label">用户管理</li>
+        <li><a href="#"><i class="fa fa-users"></i> <span>观众管理</span></a></li>
+        <li><a href="#"><i class="fa fa-user-md"></i> <span>员工管理</span></a></li>
+        <li class="sidebar-label">票务管理</li>
+        <li><a href="#"><i class="fa fa-ticket"></i> <span>售票管理</span></a></li>
+        <li><a href="#"><i class="fa fa-reply"></i> <span>退票管理</span></a></li>
+      </ul>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div class="main-area">
+      <header class="top-header">
+        <div class="logo"><i class="fa fa-film"></i> 汉唐剧院管理系统</div>
+        <div class="header-right">
+          <button id="theme-toggle-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题">☾</button>
+          <span style="font-size:13px;opacity:0.85">管理员</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">剧目管理</div>
+
+        <!-- 搜索卡片 -->
+        <div class="card">
+          <div class="search-bar">
+            <input type="text" class="form-input" v-model="searchName" placeholder="搜索剧目名称..."
+                   @keyup.enter="loadData" style="min-width:240px" />
+            <button class="btn btn-primary" @click="loadData"><i class="fa fa-search"></i> 查询</button>
+            <button class="btn btn-primary" @click="addNew" style="margin-left:auto"><i class="fa fa-plus"></i> 新增剧目</button>
+          </div>
+        </div>
+
+        <!-- 表格卡片 -->
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>编号</th>
+                  <th>名称</th>
+                  <th>类型ID</th>
+                  <th>语言ID</th>
+                  <th>时长(分钟)</th>
+                  <th>票价(元)</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in plays" :key="p.id">
+                  <td>{{ p.id }}</td>
+                  <td><strong>{{ p.name }}</strong></td>
+                  <td>{{ p.typeId }}</td>
+                  <td>{{ p.langId }}</td>
+                  <td>{{ p.length }}</td>
+                  <td>{{ p.ticketPrice }}</td>
+                  <td>
+                    <span :class="statusClass(p.status)">{{ statusText(p.status) }}</span>
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      <button class="btn btn-outline btn-xs" @click="modify(p)"><i class="fa fa-edit"></i> 修改</button>
+                      <button class="btn btn-danger btn-xs" @click="del(p.id)"><i class="fa fa-trash"></i> 删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="plays.length==0">
+                  <td colspan="8">
+                    <div class="empty-state"><i class="fa fa-inbox"></i><p>暂无数据</p></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue
+createApp({
+  data() {
+    return { searchName: '', plays: [] }
+  },
+  mounted() {
+    this.loadData()
+    updateIcon(document.documentElement.getAttribute('data-theme'))
+  },
+  methods: {
+    // 加载剧目列表
+    loadData() {
+      axios.get('/api/play', { params: { name: this.searchName } }).then(res => {
+        if (res.data.code === 200) this.plays = res.data.data
+      })
+    },
+    // 跳转新增页
+    addNew() { window.location = 'detail-vue.html?type=add' },
+    // 跳转修改页，通过URL传参
+    modify(p) {
+      window.location = 'detail-vue.html?type=update&id=' + p.id
+        + '&name=' + encodeURIComponent(p.name || '')
+        + '&typeId=' + (p.typeId || '')
+        + '&langId=' + (p.langId || '')
+        + '&length=' + (p.length || '')
+        + '&ticketPrice=' + (p.ticketPrice || '')
+        + '&introduction=' + encodeURIComponent(p.introduction || '')
+        + '&image=' + encodeURIComponent(p.image || '')
+        + '&status=' + (p.status || 0)
+    },
+    // 删除
+    del(id) {
+      if (!confirm('确定删除该剧目？')) return
+      axios.delete('/api/play/' + id).then(res => {
+        if (res.data.code === 200) this.loadData()
+        else alert(res.data.msg)
+      })
+    },
+    // 状态文本映射
+    statusText(s) {
+      if (s === 1) return '已上线'
+      if (s === -1) return '已删除'
+      return '已下线'
+    },
+    // 状态样式
+    statusClass(s) {
+      if (s === 1) return 'badge badge-active'
+      if (s === -1) return 'badge badge-muted'
+      return 'badge badge-muted'
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<title>演出厅管理 - 汉唐剧院</title>
+<link rel="stylesheet" href="../../css/font-awesome.min.css" />
+<link rel="stylesheet" href="../../css/theme.css" />
+<script src="../../js/theme.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .actions-cell { display: flex; gap: 8px; }
+  .empty-state { text-align: center; padding: 60px 0; color: var(--text-muted); }
+  .empty-state i { font-size: 48px; display: block; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="fa fa-film"></i> 汉唐剧院</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-label">剧院管理</li>
+        <li><a href="index-vue.html" class="active"><i class="fa fa-building"></i> <span>演出厅管理</span></a></li>
+        <li><a href="../play/index-vue.html"><i class="fa fa-video-camera"></i> <span>剧目管理</span></a></li>
+        <li><a href="../schedule/index-vue.html"><i class="fa fa-calendar"></i> <span>演出计划</span></a></li>
+        <li class="sidebar-label">用户管理</li>
+        <li><a href="#"><i class="fa fa-users"></i> <span>观众管理</span></a></li>
+        <li><a href="#"><i class="fa fa-user-md"></i> <span>员工管理</span></a></li>
+        <li class="sidebar-label">票务管理</li>
+        <li><a href="#"><i class="fa fa-ticket"></i> <span>售票管理</span></a></li>
+        <li><a href="#"><i class="fa fa-reply"></i> <span>退票管理</span></a></li>
+      </ul>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-area">
+      <header class="top-header">
+        <div class="logo"><i class="fa fa-film"></i> 汉唐剧院管理系统</div>
+        <div class="header-right">
+          <button id="theme-toggle-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题">☾</button>
+          <span style="font-size:13px;opacity:0.85">管理员</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">演出厅管理</div>
+
+        <!-- Search Card -->
+        <div class="card">
+          <div class="search-bar">
+            <input type="text" class="form-input" v-model="searchName" placeholder="搜索演出厅名称..."
+                   @keyup.enter="loadData" style="min-width:240px" />
+            <button class="btn btn-primary" @click="loadData"><i class="fa fa-search"></i> 查询</button>
+            <button class="btn btn-primary" @click="addNew" style="margin-left:auto"><i class="fa fa-plus"></i> 新增演出厅</button>
+          </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>编号</th>
+                  <th>名称</th>
+                  <th>座位行数</th>
+                  <th>座位列数</th>
+                  <th>总座位</th>
+                  <th>描述</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in studios" :key="s.id">
+                  <td>{{ s.id }}</td>
+                  <td><strong>{{ s.name }}</strong></td>
+                  <td>{{ s.rowCount }}</td>
+                  <td>{{ s.colCount }}</td>
+                  <td>{{ s.rowCount * s.colCount }}</td>
+                  <td class="text-muted">{{ s.introduction || '-' }}</td>
+                  <td>
+                    <span :class="s.status==1?'badge badge-active':'badge badge-muted'">
+                      {{ s.status==1 ? '启用' : '禁用' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      <button class="btn btn-outline btn-xs" @click="modify(s)"><i class="fa fa-edit"></i> 修改</button>
+                      <button class="btn btn-danger btn-xs" @click="del(s.id)"><i class="fa fa-trash"></i> 删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="studios.length==0">
+                  <td colspan="8">
+                    <div class="empty-state"><i class="fa fa-inbox"></i><p>暂无数据</p></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue
+createApp({
+  data() {
+    return { searchName: '', studios: [] }
+  },
+  mounted() {
+    this.loadData()
+    updateIcon(document.documentElement.getAttribute('data-theme'))
+  },
+  methods: {
+    loadData() {
+      axios.get('/api/studio', { params: { name: this.searchName } }).then(res => {
+        if (res.data.code === 200) this.studios = res.data.data
+      })
+    },
+    addNew() { window.location = 'detail-vue.html?type=add' },
+    modify(s) {
+      window.location = 'detail-vue.html?type=update&id=' + s.id
+        + '&name=' + encodeURIComponent(s.name)
+        + '&rowCount=' + s.rowCount
+        + '&colCount=' + s.colCount
+        + '&introduction=' + encodeURIComponent(s.introduction || '')
+    },
+    del(id) {
+      if (!confirm('确定删除？')) return
+      axios.delete('/api/studio/' + id).then(res => {
+        if (res.data.code === 200) this.loadData()
+        else alert(res.data.msg)
+      })
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

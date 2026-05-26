@@ -24,6 +24,10 @@ hs_err_pid*
 
 # Sensitive config
 src/main/resources/jdbc.properties
+src/main/resources/application.yml
+
+# Uploaded files
+/uploads/
 
 # IDE files
 src/main/*.iml

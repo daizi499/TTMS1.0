@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<title>演出计划表单 - 汉唐剧院</title>
+<link rel="stylesheet" href="../../css/font-awesome.min.css" />
+<link rel="stylesheet" href="../../css/theme.css" />
+<script src="../../js/theme.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .form-card { max-width: 640px; }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <div class="app-layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="fa fa-film"></i> 汉唐剧院</div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-label">剧院管理</li>
+        <li><a href="../studio/index-vue.html"><i class="fa fa-building"></i> <span>演出厅管理</span></a></li>
+        <li><a href="../play/index-vue.html"><i class="fa fa-video-camera"></i> <span>剧目管理</span></a></li>
+        <li><a href="index-vue.html" class="active"><i class="fa fa-calendar"></i> <span>演出计划</span></a></li>
+      </ul>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div class="main-area">
+      <header class="top-header">
+        <div class="logo"><i class="fa fa-film"></i> 汉唐剧院管理系统</div>
+        <div class="header-right">
+          <button id="theme-toggle-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题">☾</button>
+          <span style="font-size:13px;opacity:0.85">管理员</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">演出计划管理 / {{ typeText }}</div>
+
+        <div class="card form-card">
+          <form @submit.prevent="submit">
+
+            <!-- 编号（修改时显示） -->
+            <div class="form-group" v-if="type==='update'">
+              <label class="form-label">计划编号</label>
+              <input type="text" class="form-input" :value="form.id" disabled>
+            </div>
+
+            <!-- 选择演出厅（下拉框，从API加载） -->
+            <div class="form-group">
+              <label class="form-label">演出厅 <span style="color:#c62828">*</span></label>
+              <select class="form-select" v-model.number="form.studioId">
+                <option :value="null">-- 请选择演出厅 --</option>
+                <option v-for="s in studios" :key="s.id" :value="s.id">
+                  {{ s.name }}（{{ s.rowCount }}x{{ s.colCount }}，{{ s.rowCount * s.colCount }}座）
+                </option>
+              </select>
+            </div>
+
+            <!-- 选择剧目（下拉框，从API加载） -->
+            <div class="form-group">
+              <label class="form-label">剧目 <span style="color:#c62828">*</span></label>
+              <select class="form-select" v-model.number="form.playId">
+                <option :value="null">-- 请选择剧目 --</option>
+                <option v-for="p in plays" :key="p.id" :value="p.id">
+                  {{ p.name }}（{{ p.length }}分钟 / ¥{{ p.ticketPrice }}）
+                </option>
+              </select>
+            </div>
+
+            <!-- 演出时间 -->
+            <div class="form-group">
+              <label class="form-label">演出时间 <span style="color:#c62828">*</span></label>
+              <input type="datetime-local" class="form-input" v-model="form.schedTime">
+            </div>
+
+            <!-- 票价 -->
+            <div class="form-group">
+              <label class="form-label">票价（元）</label>
+              <input type="number" step="0.01" class="form-input" v-model.number="form.ticketPrice" placeholder="留空则使用剧目默认票价">
+            </div>
+
+            <!-- 状态 -->
+            <div class="form-group">
+              <label class="form-label">状态</label>
+              <select class="form-select" v-model.number="form.status">
+                <option :value="0">待排期</option>
+                <option :value="1">已排期</option>
+                <option :value="-1">已取消</option>
+              </select>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="mt-16" style="display:flex;gap:12px">
+              <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> 提交</button>
+              <button type="button" class="btn btn-outline" onclick="window.location='index-vue.html'">
+                <i class="fa fa-arrow-left"></i> 返回
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue
+
+// 从URL参数中取值
+function getParam(name) {
+  var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
+createApp({
+  data() {
+    return {
+      type: 'add',       // add 或 update
+      studios: [],       // 演出厅列表（供下拉框选择）
+      plays: [],         // 剧目列表（供下拉框选择）
+      form: {
+        id: null, studioId: null, playId: null,
+        schedTime: '', ticketPrice: null, status: 0
+      }
+    }
+  },
+  computed: {
+    typeText() { return this.type === 'add' ? '新增演出计划' : '修改演出计划' }
+  },
+  mounted() {
+    // 加载演出厅和剧目下拉数据
+    this.loadStudios()
+    this.loadPlays()
+
+    // 读取URL参数
+    this.type = getParam('type') || 'add'
+    if (this.type === 'update') {
+      this.form.id = parseInt(getParam('id'))
+      this.form.studioId = parseInt(getParam('studioId')) || null
+      this.form.playId = parseInt(getParam('playId')) || null
+      var st = getParam('schedTime')
+      // 把字符串转成 datetime-local 输入框需要的格式
+      if (st) this.form.schedTime = st.replace(' ', 'T').substring(0, 16)
+      this.form.ticketPrice = parseFloat(getParam('ticketPrice')) || null
+      this.form.status = parseInt(getParam('status')) || 0
+    }
+
+    updateIcon(document.documentElement.getAttribute('data-theme'))
+  },
+  methods: {
+    // 加载演出厅列表（只显示启用状态 status=1）
+    loadStudios() {
+      axios.get('/api/studio').then(res => {
+        if (res.data.code === 200) this.studios = res.data.data.filter(s => s.status === 1)
+      })
+    },
+    // 加载剧目列表（只显示已上线 status=1）
+    loadPlays() {
+      axios.get('/api/play').then(res => {
+        if (res.data.code === 200) this.plays = res.data.data.filter(p => p.status === 1)
+      })
+    },
+    // 提交表单
+    submit() {
+      if (!this.form.studioId) return alert('请选择演出厅')
+      if (!this.form.playId) return alert('请选择剧目')
+      if (!this.form.schedTime) return alert('请选择演出时间')
+
+      if (this.type === 'add') {
+        axios.post('/api/schedule', this.form).then(res => {
+          alert(res.data.msg)
+          if (res.data.code === 200) window.location = 'index-vue.html'
+        })
+      } else {
+        axios.put('/api/schedule', this.form).then(res => {
+          alert(res.data.msg)
+          if (res.data.code === 200) window.location = 'index-vue.html'
+        })
+      }
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
